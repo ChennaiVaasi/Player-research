@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,7 @@ class DataService:
         self.players_path = self.output_dir / "decision_moments_players.json"
         self.decisions_path = self.output_dir / "decision_moments.csv"
         self.overrides_path = self.root / "backend" / "data" / "intent_overrides.json"
+        self.persona_dashboard_path = self.source_root / "site" / "persona-dashboard-data.js"
 
     def get_dashboard_payload(self) -> dict[str, Any]:
         return {
@@ -55,6 +57,9 @@ class DataService:
             "intentOptions": INTENT_OPTIONS,
             "intentFamilies": INTENT_FAMILIES,
         }
+
+    def get_persona_dashboard_payload(self) -> dict[str, Any]:
+        return self._load_persona_dashboard()
 
     def get_overview(self) -> dict[str, Any]:
         report = self._read_json(self.report_path)
@@ -196,3 +201,10 @@ class DataService:
     def _write_json(path: Path, payload: dict[str, Any]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    @lru_cache(maxsize=1)
+    def _load_persona_dashboard(self) -> dict[str, Any]:
+        text = self.persona_dashboard_path.read_text(encoding="utf-8")
+        cleaned = re.sub(r"^window\.PERSONA_DASHBOARD_DATA\s*=\s*", "", text.strip())
+        cleaned = cleaned.rstrip(";")
+        return json.loads(cleaned)

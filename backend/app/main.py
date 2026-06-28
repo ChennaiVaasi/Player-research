@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .routers import dashboard
@@ -28,6 +29,11 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/persona", include_in_schema=False)
+@app.get("/decisions", include_in_schema=False)
+def spa_subpage() -> FileResponse:
+    return FileResponse(FRONTEND_DIST / "index.html")
+
+
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
-

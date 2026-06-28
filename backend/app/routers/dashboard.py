@@ -22,6 +22,11 @@ def get_dashboard() -> dict:
     return service.get_dashboard_payload()
 
 
+@router.get("/persona-dashboard")
+def get_persona_dashboard() -> dict:
+    return service.get_persona_dashboard_payload()
+
+
 @router.get("/overview")
 def get_overview() -> dict:
     return service.get_overview()
@@ -63,4 +68,3 @@ def delete_override(position_id: str) -> dict:
 @router.post("/analyze")
 def analyze_pgn(payload: AnalyzeRequest) -> dict:
     return service.stub_analyze(payload.pgn, payload.batch_size)
-

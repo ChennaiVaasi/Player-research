@@ -4,16 +4,26 @@ import ChessBoard from "./components/ChessBoard";
 import DecisionDetail from "./components/DecisionDetail";
 import DecisionList from "./components/DecisionList";
 import Filters from "./components/Filters";
+import PersonaPage from "./components/PersonaPage";
 import { intentFamily, labelize } from "./lib/fen";
 
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const PAGE_DECISIONS = "decisions";
+const PAGE_PERSONA = "persona";
 
 function byPlayerName(playersById, playerId) {
   return playersById.get(playerId)?.playerName || "";
 }
 
-export default function App() {
+function pageFromLocation() {
+  const pathname = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+  if (pathname.endsWith("/persona") || hash === "#/persona" || hash === "#persona") return PAGE_PERSONA;
+  return PAGE_DECISIONS;
+}
+
+function DecisionExplorerPage() {
   const [payload, setPayload] = useState(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState("all");
   const [chosenIntentFamily, setChosenIntentFamily] = useState("all");
@@ -204,3 +214,48 @@ export default function App() {
   );
 }
 
+export default function App() {
+  const [page, setPage] = useState(pageFromLocation);
+
+  useEffect(() => {
+    function handleRouteChange() {
+      setPage(pageFromLocation());
+    }
+    window.addEventListener("popstate", handleRouteChange);
+    window.addEventListener("hashchange", handleRouteChange);
+    return () => {
+      window.removeEventListener("popstate", handleRouteChange);
+      window.removeEventListener("hashchange", handleRouteChange);
+    };
+  }, []);
+
+  function navigate(nextPage) {
+    const nextPath = nextPage === PAGE_PERSONA ? "/persona" : "/decisions";
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
+    }
+    setPage(nextPage);
+  }
+
+  return (
+    <div className="page-shell">
+      <nav className="top-nav">
+        <button
+          type="button"
+          className={`nav-link ${page === PAGE_DECISIONS ? "active" : ""}`}
+          onClick={() => navigate(PAGE_DECISIONS)}
+        >
+          Decision Explorer
+        </button>
+        <button
+          type="button"
+          className={`nav-link ${page === PAGE_PERSONA ? "active" : ""}`}
+          onClick={() => navigate(PAGE_PERSONA)}
+        >
+          Persona Summary
+        </button>
+      </nav>
+      {page === PAGE_PERSONA ? <PersonaPage /> : <DecisionExplorerPage />}
+    </div>
+  );
+}
