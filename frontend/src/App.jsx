@@ -5,12 +5,14 @@ import DecisionDetail from "./components/DecisionDetail";
 import DecisionList from "./components/DecisionList";
 import Filters from "./components/Filters";
 import PersonaPage from "./components/PersonaPage";
+import ResearchPage from "./components/ResearchPage";
 import { intentFamily, labelize } from "./lib/fen";
 
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 const PAGE_DECISIONS = "decisions";
 const PAGE_PERSONA = "persona";
+const PAGE_RESEARCH = "research";
 
 function byPlayerName(playersById, playerId) {
   return playersById.get(playerId)?.playerName || "";
@@ -20,7 +22,108 @@ function pageFromLocation() {
   const pathname = window.location.pathname.toLowerCase();
   const hash = window.location.hash.toLowerCase();
   if (pathname.endsWith("/persona") || hash === "#/persona" || hash === "#persona") return PAGE_PERSONA;
+  if (pathname.endsWith("/research") || hash === "#/research" || hash === "#research") return PAGE_RESEARCH;
   return PAGE_DECISIONS;
+}
+
+function AnalysisPrepCard({ runs, onRunCreated }) {
+  const [runName, setRunName] = useState("");
+  const [batchSize, setBatchSize] = useState(20);
+  const [pgn, setPgn] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage("");
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/api/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          run_name: runName,
+          batch_size: Number(batchSize) || 20,
+          pgn
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || data.status === "invalid") {
+        throw new Error(data.message || `HTTP ${response.status}`);
+      }
+      setMessage(`${data.runName} prepared: ${data.gameCount} games in ${data.estimatedBatchCount} batches.`);
+      setPgn("");
+      setRunName("");
+      onRunCreated(data);
+    } catch (submitError) {
+      setError(submitError.message || "Failed to prepare analysis run");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="card analysis-card">
+      <div className="viewer-head">
+        <div>
+          <div className="eyebrow">Analysis Prep</div>
+          <h2>Prepare a new PGN run</h2>
+          <p className="muted">
+            Paste PGN, keep the default batch size of 20 if you want, and the app will save a prepared run in the repo backend.
+          </p>
+        </div>
+      </div>
+
+      <form className="analysis-form" onSubmit={handleSubmit}>
+        <div className="analysis-fields">
+          <label>
+            Run name
+            <input value={runName} onChange={(event) => setRunName(event.target.value)} placeholder="June upload, club sample, rapid batch..." />
+          </label>
+          <label>
+            Batch size
+            <input type="number" min="1" max="200" value={batchSize} onChange={(event) => setBatchSize(event.target.value)} />
+          </label>
+        </div>
+        <label>
+          PGN input
+          <textarea
+            className="analysis-textarea"
+            value={pgn}
+            onChange={(event) => setPgn(event.target.value)}
+            placeholder={'[Event "Example"]\n[White "Player A"]\n[Black "Player B"]\n\n1. e4 e5 2. Nf3 Nc6 *'}
+          />
+        </label>
+        <div className="analysis-actions">
+          <button type="submit" disabled={submitting}>{submitting ? "Preparing..." : "Prepare analysis run"}</button>
+          {message ? <span className="analysis-success">{message}</span> : null}
+          {error ? <span className="analysis-error">{error}</span> : null}
+        </div>
+      </form>
+
+      <div className="analysis-run-list">
+        <div className="list-head">
+          <h2>Recent prepared runs</h2>
+          <p className="muted">The engine pipeline is still the next wiring step, but the upload and batching workflow now lives in the app.</p>
+        </div>
+        <div className="analysis-run-grid">
+          {runs.length ? runs.slice(0, 6).map((run) => (
+            <div className="mini-card" key={run.runId}>
+              <h3>{run.runName}</h3>
+              <div className="detail-row-list">
+                <div className="detail-row"><span>Status: {labelize(run.status)}</span></div>
+                <div className="detail-row"><span>Games: {run.gameCount}</span></div>
+                <div className="detail-row"><span>Eligible: {run.eligibleGames}</span></div>
+                <div className="detail-row"><span>Batches: {run.estimatedBatchCount} at {run.batchSize}</span></div>
+              </div>
+            </div>
+          )) : <p className="muted">No prepared runs yet.</p>}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function DecisionExplorerPage() {
@@ -32,6 +135,7 @@ function DecisionExplorerPage() {
   const [selectedPositionId, setSelectedPositionId] = useState("");
   const [mode, setMode] = useState("before");
   const [overrides, setOverrides] = useState({});
+  const [analysisRuns, setAnalysisRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -47,6 +151,7 @@ function DecisionExplorerPage() {
         if (!active) return;
         setPayload(data);
         setOverrides(data.overrides || {});
+        setAnalysisRuns(data.analysisRuns || []);
       } catch (loadError) {
         if (!active) return;
         setError(loadError.message || "Failed to load dashboard");
@@ -129,6 +234,10 @@ function DecisionExplorerPage() {
     await fetch(`${API_BASE}/api/overrides/${selectedDecision.positionId}`, { method: "DELETE" });
   }
 
+  function handleRunCreated(run) {
+    setAnalysisRuns((current) => [run, ...current.filter((item) => item.runId !== run.runId)]);
+  }
+
   if (loading) {
     return <div className="app-shell"><div className="hero card"><h1>Loading dashboard...</h1></div></div>;
   }
@@ -144,7 +253,7 @@ function DecisionExplorerPage() {
           <div className="eyebrow">Decision Persona Dashboard</div>
           <h1>Equal-choice moments as a real web app</h1>
           <p className="muted">
-            Browse engine-close decisions, inspect the board, and tune intent labels through a full-stack app instead of a generated HTML file.
+            Browse engine-close decisions, inspect the board, tune intent labels, and prepare new PGN runs from the same full-stack app.
           </p>
         </div>
         <div className="stat-row">
@@ -153,6 +262,8 @@ function DecisionExplorerPage() {
           <div className="stat"><span>Players</span><strong>{overview?.playersFound ?? 0}</strong></div>
         </div>
       </header>
+
+      <AnalysisPrepCard runs={analysisRuns} onRunCreated={handleRunCreated} />
 
       <div className="layout">
         <Filters
@@ -177,7 +288,7 @@ function DecisionExplorerPage() {
                 <h2>{selectedDecision ? `${selectedDecision.playerName}: ${selectedDecision.playedMoveSan}` : "Select a decision"}</h2>
                 <p className="muted">
                   {selectedPlayer
-                    ? `${byPlayerName(playersById, selectedPlayer.playerId) || selectedPlayer.playerName} • ${selectedPlayer.personaPrimary || "Unknown persona"}`
+                    ? `${byPlayerName(playersById, selectedPlayer.playerId) || selectedPlayer.playerName} - ${selectedPlayer.personaPrimary || "Unknown persona"}`
                     : "Use the list to inspect a decision."}
                 </p>
               </div>
@@ -230,7 +341,7 @@ export default function App() {
   }, []);
 
   function navigate(nextPage) {
-    const nextPath = nextPage === PAGE_PERSONA ? "/persona" : "/decisions";
+    const nextPath = nextPage === PAGE_PERSONA ? "/persona" : nextPage === PAGE_RESEARCH ? "/research" : "/decisions";
     if (window.location.pathname !== nextPath) {
       window.history.pushState({}, "", nextPath);
     }
@@ -249,13 +360,20 @@ export default function App() {
         </button>
         <button
           type="button"
+          className={`nav-link ${page === PAGE_RESEARCH ? "active" : ""}`}
+          onClick={() => navigate(PAGE_RESEARCH)}
+        >
+          Research Generator
+        </button>
+        <button
+          type="button"
           className={`nav-link ${page === PAGE_PERSONA ? "active" : ""}`}
           onClick={() => navigate(PAGE_PERSONA)}
         >
           Persona Summary
         </button>
       </nav>
-      {page === PAGE_PERSONA ? <PersonaPage /> : <DecisionExplorerPage />}
+      {page === PAGE_PERSONA ? <PersonaPage /> : page === PAGE_RESEARCH ? <ResearchPage /> : <DecisionExplorerPage />}
     </div>
   );
 }

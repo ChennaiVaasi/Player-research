@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from ..services.data_service import DataService
@@ -15,6 +15,7 @@ class OverridePayload(BaseModel):
 class AnalyzeRequest(BaseModel):
     pgn: str
     batch_size: int = 20
+    run_name: str | None = None
 
 
 @router.get("/dashboard")
@@ -25,6 +26,14 @@ def get_dashboard() -> dict:
 @router.get("/persona-dashboard")
 def get_persona_dashboard() -> dict:
     return service.get_persona_dashboard_payload()
+
+
+@router.get("/research-dashboard")
+def get_research_dashboard(
+    player_id: str = Query("all", alias="playerId"),
+    topic_count: int = Query(12, alias="topicCount"),
+) -> dict:
+    return service.get_research_dashboard(player_id, topic_count)
 
 
 @router.get("/overview")
@@ -67,4 +76,9 @@ def delete_override(position_id: str) -> dict:
 
 @router.post("/analyze")
 def analyze_pgn(payload: AnalyzeRequest) -> dict:
-    return service.stub_analyze(payload.pgn, payload.batch_size)
+    return service.create_analysis_run(payload.pgn, payload.batch_size, payload.run_name)
+
+
+@router.get("/analysis-runs")
+def get_analysis_runs() -> list[dict]:
+    return service.get_analysis_runs()
