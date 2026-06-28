@@ -272,7 +272,7 @@ export default function PersonaPage() {
                   <h2>{activePosition ? `${activePosition.focus}: ${activePosition.move}` : "Select a position"}</h2>
                   <p className="muted">
                     {activePosition
-                      ? `${activePosition.date} â€¢ ${activePosition.game}`
+                      ? `${activePosition.date} • ${activePosition.game}`
                       : "Pick a moment from the list to inspect the position."}
                   </p>
                 </div>

@@ -23,7 +23,7 @@ export default function DecisionDetail({ decision, effectiveIntent, overrideInte
           <div>
             <h2>{decision.playerName}: {decision.playedMoveSan}</h2>
             <div className="muted">
-              Move {decision.moveNumber} â€¢ {decision.playerColor} to move â€¢ {decision.positionId}
+              Move {decision.moveNumber} • {decision.playerColor} to move • {decision.positionId}
             </div>
           </div>
         </div>
@@ -37,9 +37,9 @@ export default function DecisionDetail({ decision, effectiveIntent, overrideInte
           </div>
           <div className="mini-card">
             <h3>Engine top 3</h3>
-            <DetailRow label="1" value={`${decision.bestMoveSan} â€¢ ${decision.bestEvalCp} cp â€¢ ${labelize(decision.bestMoveIntent)} (${labelize(decision.bestMoveIntentFamily)})`} />
-            <DetailRow label="2" value={`${decision.secondMoveSan} â€¢ ${decision.secondEvalCp} cp â€¢ ${labelize(decision.secondMoveIntent)} (${labelize(decision.secondMoveIntentFamily)})`} />
-            <DetailRow label="3" value={`${decision.thirdMoveSan} â€¢ ${decision.thirdEvalCp} cp â€¢ ${labelize(decision.thirdMoveIntent)} (${labelize(decision.thirdMoveIntentFamily)})`} />
+            <DetailRow label="1" value={`${decision.bestMoveSan} • ${decision.bestEvalCp} cp • ${labelize(decision.bestMoveIntent)} (${labelize(decision.bestMoveIntentFamily)})`} />
+            <DetailRow label="2" value={`${decision.secondMoveSan} • ${decision.secondEvalCp} cp • ${labelize(decision.secondMoveIntent)} (${labelize(decision.secondMoveIntentFamily)})`} />
+            <DetailRow label="3" value={`${decision.thirdMoveSan} • ${decision.thirdEvalCp} cp • ${labelize(decision.thirdMoveIntent)} (${labelize(decision.thirdMoveIntentFamily)})`} />
           </div>
           <div className="mini-card">
             <h3>Decision lens</h3>

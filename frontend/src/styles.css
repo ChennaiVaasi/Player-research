@@ -558,3 +558,24 @@ textarea {
     padding: 0 16px;
   }
 }
+
+.react-board {
+  background: linear-gradient(180deg, rgba(255,255,255,0.2), rgba(0,0,0,0.05));
+}
+
+.react-piece {
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  user-select: none;
+  filter: drop-shadow(0 2px 1px rgba(48, 24, 15, 0.2));
+}
+
+.board-animating .react-piece {
+  transition: transform 0.22s ease, filter 0.22s ease;
+}
+
+.ranks,
+.files {
+  place-items: center;
+}
